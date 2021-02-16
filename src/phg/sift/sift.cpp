@@ -17,7 +17,7 @@
 #define DEBUG_ENABLE     1
 #define DEBUG_PATH       std::string("data/debug/test_sift/debug/")
 
-#define MAX_ITERS                   100
+#define MAX_ITERS                   10
 #define NOCTAVES                    3                    // число октав
 #define OCTAVE_NLAYERS              3                    // в [lowe04] это число промежуточных степеней размытия картинки в рамках одной октавы обозначается - s, т.е. s слоев в каждой октаве
 #define OCTAVE_GAUSSIAN_IMAGES      (OCTAVE_NLAYERS + 3)
