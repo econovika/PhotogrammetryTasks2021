@@ -413,7 +413,7 @@ bool phg::SIFT::buildDescriptor(const cv::Mat &img, float px, float py, double d
                             size_t bin = floor(DESCRIPTOR_NBINS * orientation / 360);
                             rassert(bin < DESCRIPTOR_NBINS, 361236315613);
                             sum.at<float>(bin, 1) += magnitude;
-                            // TODO хорошая идея добавить трилинейную интерполяцию как предложено в статье, или хотя бы сэмулировать ее - сгладить получившиеся гистограммы
+
                             cv::GaussianBlur(sum, sum, cv::Size(0, 0), 1, 1);
                         }
                     }
