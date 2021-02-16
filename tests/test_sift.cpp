@@ -75,7 +75,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
 
     ASSERT_FALSE(img0.empty()); // проверка что картинка была загружена
     // убедитесь что рабочая папка (Edit Configurations...->Working directory) указывает на корневую папку проекта (и тогда картинка по умолчанию найдется по относительному пути - data/src/test_sift/unicorn.png)
-    
+
     size_t width = img0.cols;
     size_t height = img0.rows;
     cv::Mat transformedImage;
@@ -128,7 +128,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
             }
 
             std::cout << log_prefix << "Points detected: " << kps0.size() << " -> " << kps1.size() << " (in " << t.elapsed() << " sec)" << std::endl;
-    
+
             std::vector<cv::Point2f> ps01(kps0.size()); // давайте построим эталон - найдем куда бы должны были сместиться ключевые точки с исходного изображения с учетом нашей матрицы трансформации M
             {
                 std::vector<cv::Point2f> ps0(kps0.size()); // здесь мы сейчас расположим детектированные ключевые точки (каждую нужно преобразовать из типа КлючеваяТочка в Точка2Дэ)
@@ -160,7 +160,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
                     continue;
                 }
 
-                ptrdiff_t closest_j = -1; // будем искать ближайшую точку детектированную на искаженном изображении 
+                ptrdiff_t closest_j = -1; // будем искать ближайшую точку детектированную на искаженном изображении
                 double min_error = std::numeric_limits<float>::max();
                 for (ptrdiff_t j = 0; j < kps1.size(); ++j) {
                     double error = cv::norm(kps1[j].pt - p01);
@@ -192,12 +192,12 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
                         desc_rand_dist_sum += cv::norm(d0, random_d1, cv::NORM_L2);
 
                         desc_dist_sum += cv::norm(d0, d1, cv::NORM_L2);
-                        
+
                         // Это способ заглянуть в черную коробку, так вы можете визуально посмотреть на то
                         // что за числа в дескрипторах двух сопоставленных точек, насколько они похожи,
                         // и сверить что расстояние между дескрипторами - это действительно расстояние
                         // между точками в пространстве высокой размерности:
-#if 1
+#if 0
                         if (i % 100 == 0) {
                             #pragma omp critical
                             {
@@ -242,7 +242,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
             // где проблемы, или где можно что-то улучшить
             drawKeyPoints(result0, kps0, is_not_matched0);
             drawKeyPoints(result1, kps1, is_not_matched1);
-    
+
             cv::Mat result = concatenateImagesLeftRight(result0, result1);
             cv::putText(result, log_prefix + " recall=" + to_string(recall), cv::Point(10, 30), cv::FONT_HERSHEY_DUPLEX, 0.75, CV_RGB(255, 255, 0));
             cv::putText(result, "avgPixelsError=" + to_string(avg_error), cv::Point(10, 60), cv::FONT_HERSHEY_DUPLEX, 0.75, CV_RGB(255, 255, 0));
