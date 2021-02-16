@@ -341,7 +341,7 @@ bool phg::SIFT::buildLocalOrientationHists(const cv::Mat &img, size_t i, size_t 
             // m(x, y)=(L(x + 1, y) − L(x − 1, y))^2 + (L(x, y + 1) − L(x, y − 1))^2
             double dy = img.at<float>(y + 1, x) - img.at<float>(y - 1, x);
             double dx = img.at<float>(y, x + 1) - img.at<float>(y, x - 1);
-            double magnitude = sqrt(pow(dy, 2) + pow(dx, 2));
+            double magnitude = sqrt(dy * dy + dx * dx);
 
             // orientation == theta
             // atan( (L(x, y + 1) − L(x, y − 1)) / (L(x + 1, y) − L(x − 1, y)) )
@@ -400,7 +400,7 @@ bool phg::SIFT::buildDescriptor(const cv::Mat &img, float px, float py, double d
 
                             double dy = img.at<float>(y + 1, x) - img.at<float>(y - 1, x);
                             double dx = img.at<float>(y, x + 1) - img.at<float>(y, x - 1);
-                            double magnitude = sqrt(pow(dy, 2) + pow(dx, 2));
+                            double magnitude = sqrt(dy * dy + dx * dx);
 
                             double orientation = atan2(dy, dx);
                             orientation = orientation * 180.0 / M_PI;
@@ -413,6 +413,7 @@ bool phg::SIFT::buildDescriptor(const cv::Mat &img, float px, float py, double d
                             size_t bin = floor(DESCRIPTOR_NBINS * orientation / 360);
                             rassert(bin < DESCRIPTOR_NBINS, 361236315613);
                             sum.at<float>(bin, 1) += magnitude;
+                            // TODO хорошая идея добавить трилинейную интерполяцию как предложено в статье, или хотя бы сэмулировать ее - сгладить получившиеся гистограммы
                             cv::GaussianBlur(sum, sum, cv::Size(0, 0), 1, 1);
                         }
                     }
