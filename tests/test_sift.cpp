@@ -70,7 +70,7 @@ double diffAngles(double angle0, double angle1) {
 // На вход передается матрица описывающая преобразование картинки (сдвиг, поворот, масштабирование или их комбинация), допустимый процент Recall, и опционально можно тестировать другую картинку
 void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat()) {
     if (img0.empty()) {
-        img0 = cv::imread("data/src/test_sift/unicorn.png"); // грузим картинку по умолчанию
+        img0 = cv::imread("../data/src/test_sift/unicorn.png"); // грузим картинку по умолчанию
     }
 
     ASSERT_FALSE(img0.empty()); // проверка что картинка была загружена
@@ -249,7 +249,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
 
             // отладочную визуализацию сохраняем в папку чтобы легко было посмотреть на любой промежуточный результат
             // или в данном случае - на любой результат любого теста
-            cv::imwrite("data/debug/test_sift/" + getTestSuiteName() + "/" + getTestName() + "_" + method_name + ".png", result);
+            cv::imwrite("../data/debug/test_sift/" + getTestSuiteName() + "/" + getTestName() + "_" + method_name + ".png", result);
 
             if (SHOW_RESULTS) {
                 // показать результат сразу в диалоге удобно если вы запускаете один и тот же тест раз за разом
@@ -412,7 +412,7 @@ TEST (SIFT, Rotate30Scale75) {
 }
 
 TEST (SIFT, HerzJesu19RotateM40) {
-    cv::Mat jesu19 = cv::imread("data/src/test_sift/herzjesu19.png");
+    cv::Mat jesu19 = cv::imread("../data/src/test_sift/herzjesu19.png");
 
     ASSERT_FALSE(jesu19.empty()); // проверка что картинка была загружена
     // убедитесь что рабочая папка (Edit Configurations...->Working directory) указывает на корневую папку проекта
