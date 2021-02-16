@@ -352,7 +352,7 @@ bool phg::SIFT::buildLocalOrientationHists(const cv::Mat &img, size_t i, size_t 
             if (orientation >= 360.0) orientation -= 360.0;
             rassert(orientation >= 0.0 && orientation < 360.0, 5361615612);
             static_assert(360 % ORIENTATION_NHISTS == 0, "Inappropriate bins number!");
-            size_t bin = floor(orientation * ORIENTATION_NHISTS / 360);
+            size_t bin = floor(orientation * DESCRIPTOR_NBINS / 360);
             rassert(bin < ORIENTATION_NHISTS, 361236315613);
             sum.at<float>(bin, 1) += magnitude;
 
