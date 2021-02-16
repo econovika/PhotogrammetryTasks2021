@@ -17,7 +17,7 @@
 #define DEBUG_ENABLE     1
 #define DEBUG_PATH       std::string("data/debug/test_sift/debug/")
 
-#define MAX_ITERS                   10
+#define MAX_ITERS                   100
 #define NOCTAVES                    3                    // число октав
 #define OCTAVE_NLAYERS              3                    // в [lowe04] это число промежуточных степеней размытия картинки в рамках одной октавы обозначается - s, т.е. s слоев в каждой октаве
 #define OCTAVE_GAUSSIAN_IMAGES      (OCTAVE_NLAYERS + 3)
@@ -208,38 +208,35 @@ void phg::SIFT::findLocalExtremasAndDescribe(const std::vector<cv::Mat> &gaussia
 
                         // 4 Accurate keypoint localization
                         cv::KeyPoint kp;
-                        float dx = 0.0f;
-                        float dy = 0.0f;
-                        float dvalue = 0.0f;
 
-                        float y = dy;
-                        float x = dx;
-                        float value = dvalue;
+                        float dy = 0.0f;
+                        float dx = 0.0f;
+                        float dvalue = 0.0f;
 
                         const float deriv_scale = 0.5f;
                         const float cross_deriv_scale = 0.25f;
 #if SUBPIXEL_FITTING_ENABLE // такие тумблеры включающие/выключающие очередное улучшение алгоритма позволяют оценить какой вклад эта фича вносит в качество результата если в рамках уже готового алгоритма попробовать ее включить/выключить
                         {
                             for (size_t s = 0; s < MAX_ITERS; s++) {
-                                if (!(y < 0 && y + 1 < DoGs[1].rows,
-                                      x < 0 && x + 1 < DoGs[1].cols))
+                                if (!(j + dy > 0 && j + dy + 1 < DoGs[1].rows &&
+                                      i + dx > 0 && i + dx + 1 < DoGs[1].cols))
                                     break;
 
-                                cv::Vec3f dD((DoGs[1].at<float>(y, x + 1) - DoGs[1].at<float>(y, x - 1)) * deriv_scale,
-                                             (DoGs[1].at<float>(y + 1, x) - DoGs[1].at<float>(y - 1, x)) * deriv_scale,
-                                             (DoGs[2].at<float>(y, x) - DoGs[2].at<float>(y - 1, x)) * deriv_scale
+                                cv::Vec3f dD((DoGs[1].at<float>(j + dy, i + dx + 1) - DoGs[1].at<float>(j + dy, i + dx - 1)) * deriv_scale,
+                                             (DoGs[1].at<float>(j + dy + 1, i + dx) - DoGs[1].at<float>(j + dy - 1, i + dx)) * deriv_scale,
+                                             (DoGs[2].at<float>(j + dy, i + dx) - DoGs[0].at<float>(j + dy, i + dx)) * deriv_scale
                                             );
 
-                                float v2 = DoGs[1].at<float>(y, x) * 2;
-                                float dxx = (DoGs[1].at<float>(y, x + 1) + DoGs[1].at<float>(y, x - 1) - v2);
-                                float dyy = (DoGs[1].at<float>(y + 1, x) + DoGs[1].at<float>(y - 1, x) - v2);
-                                float dzz = (DoGs[2].at<float>(y, x) + DoGs[0].at<float>(y, x) - v2);
-                                float dxy = (DoGs[1].at<float>(y + 1, x + 1) - DoGs[1].at<float>(y + 1, x - 1) -
-                                             DoGs[1].at<float>(y - 1, x + 1) + DoGs[1].at<float>(y - 1, x - 1)) * cross_deriv_scale;
-                                float dxz = (DoGs[2].at<float>(y, x + 1) - DoGs[2].at<float>(y, x - 1) -
-                                             DoGs[0].at<float>(y, x + 1) + DoGs[0].at<float>(y, x - 1)) * cross_deriv_scale;
-                                float dyz = (DoGs[2].at<float>(y + 1, x) - DoGs[2].at<float>(y - 1, x) -
-                                             DoGs[0].at<float>(y + 1, x) + DoGs[0].at<float>(y - 1, x)) * cross_deriv_scale;
+                                float v2 = DoGs[1].at<float>(j + dy, i + dx) * 2;
+                                float dxx = (DoGs[1].at<float>(j + dy, i + dx + 1) + DoGs[1].at<float>(j + dy, i + dx - 1) - v2);
+                                float dyy = (DoGs[1].at<float>(j + dy + 1, i + dx) + DoGs[1].at<float>(j + dy - 1, i + dx) - v2);
+                                float dzz = (DoGs[2].at<float>(j + dy, i + dx) + DoGs[0].at<float>(j + dy, i + dx) - v2);
+                                float dxy = (DoGs[1].at<float>(j + dy + 1, i + dx + 1) - DoGs[1].at<float>(j + dy + 1, i + dx - 1) -
+                                             DoGs[1].at<float>(j + dy - 1, i + dx + 1) + DoGs[1].at<float>(j + dy - 1, i + dx - 1)) * cross_deriv_scale;
+                                float dxz = (DoGs[2].at<float>(j + dy, i + dx + 1) - DoGs[2].at<float>(j + dy, i + dx - 1) -
+                                             DoGs[0].at<float>(j + dy, i + dx + 1) + DoGs[0].at<float>(j + dy, i + dx - 1)) * cross_deriv_scale;
+                                float dyz = (DoGs[2].at<float>(j + dy + 1, i + dx) - DoGs[2].at<float>(j + dy - 1, i + dx) -
+                                             DoGs[0].at<float>(j + dy + 1, i + dx) + DoGs[0].at<float>(j + dy - 1, i + dx)) * cross_deriv_scale;
 
                                 cv::Matx33f H(dxx, dxy, dxz,
                                               dxy, dyy, dyz,
@@ -250,13 +247,14 @@ void phg::SIFT::findLocalExtremasAndDescribe(const std::vector<cv::Mat> &gaussia
                                 if (std::abs(-X[1]) < 0.5f && std::abs(-X[0]) < 0.5f && std::abs(-X[2]) < 0.5f)
                                     break;
 
-                                y += round(-X[0]);
-                                x += round(-X[1]);
-                                value += round(-X[2]);
+                                dy += round(-X[0]);
+                                dx += round(-X[1]);
+                                dvalue += round(-X[2]);
 
                                 // value === layer
-                                if (value < 1 || value > OCTAVE_NLAYERS)
+                                if (dvalue < 1 || dvalue > OCTAVE_NLAYERS)
                                     break;
+
                             }
                         }
 #endif
@@ -348,8 +346,8 @@ bool phg::SIFT::buildLocalOrientationHists(const cv::Mat &img, size_t i, size_t 
             double orientation = atan2(dy, dx);
             orientation = orientation * 180.0 / M_PI;
             orientation = (orientation + 90.0);
-            if (orientation <  0.0)   orientation += 360.0;
-            if (orientation >= 360.0) orientation -= 360.0;
+            while (orientation <  0.0)   orientation += 360.0;
+            while (orientation >= 360.0) orientation -= 360.0;
             rassert(orientation >= 0.0 && orientation < 360.0, 5361615612);
             static_assert(360 % ORIENTATION_NHISTS == 0, "Inappropriate bins number!");
             size_t bin = floor(orientation * DESCRIPTOR_NBINS / 360);
@@ -395,7 +393,7 @@ bool phg::SIFT::buildDescriptor(const cv::Mat &img, float px, float py, double d
                             int x = (int) (px + shift.x);
                             int y = (int) (py + shift.y);
 
-                            if (y - 1 < 0 || y + 1 > img.rows || x - 1 < 0 || x + 1 > img.cols)
+                            if (y - 1 < 0 || y + 1 >= img.rows || x - 1 < 0 || x + 1 > img.cols)
                                 return false;
 
                             double dy = img.at<float>(y + 1, x) - img.at<float>(y - 1, x);
@@ -405,8 +403,8 @@ bool phg::SIFT::buildDescriptor(const cv::Mat &img, float px, float py, double d
                             double orientation = atan2(dy, dx);
                             orientation = orientation * 180.0 / M_PI;
                             orientation = (orientation + 90.0);
-                            if (orientation <  0.0)   orientation += 360.0;
-                            if (orientation >= 360.0) orientation -= 360.0;
+                            while (orientation <  0.0)   orientation += 360.0;
+                            while (orientation >= 360.0) orientation -= 360.0;
 
                             rassert(orientation >= 0.0 && orientation < 360.0, 3515215125412);
                             static_assert(360 % DESCRIPTOR_NBINS == 0, "Inappropriate bins number!");
