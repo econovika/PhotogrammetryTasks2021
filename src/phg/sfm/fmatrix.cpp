@@ -148,7 +148,7 @@ namespace {
         const int n_samples = 8;
 
         // const int n_trials = std::log(1 - p) / std::log(1 - std::pow(w, n_samples));
-        const int n_trials = 10000;
+        const int n_trials = 15000;
 
         uint64_t seed = 1;
 
