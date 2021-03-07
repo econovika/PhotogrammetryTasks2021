@@ -438,7 +438,6 @@ namespace {
     }
 
 }
-
 TEST (SFM, RelativePosition2View) {
 
 #if !ENABLE_MY_SFM

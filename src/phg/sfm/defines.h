@@ -65,4 +65,3 @@ inline void copy(const EIGEN_TYPE &F, cv::Matx<double, SIZE, SIZE>  &Fcv)
         for (size_t j = 0; j < SIZE; ++j)
             Fcv(i, j) = F(i, j);
     }
-}
