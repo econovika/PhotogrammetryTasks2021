@@ -174,10 +174,11 @@ namespace {
         const int n_matches = points_lhs.size();
 
         // https://en.wikipedia.org/wiki/Random_sample_consensus#Parameters
-        double p = 0.9;
-        double w = (0.5 * n_matches) / n_matches;
+        // double p = 0.9;
+        // double w = (0.5 * n_matches) / n_matches;
         const int n_samples = 4;
-        const int n_trials = std::log(1 - p) / std::log(1 - std::pow(w, n_samples));
+        // const int n_trials = std::log(1 - p) / std::log(1 - std::pow(w, n_samples));
+        const int n_trials = 20000;
 
         uint64_t seed = 1;
         const double reprojection_error_threshold_px = 2;
