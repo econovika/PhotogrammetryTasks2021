@@ -12,6 +12,9 @@
 
 #include "utils/test_utils.h"
 
+#ifndef M_PI
+#define M_PI 3.14159265358979323846
+#endif
 
 
 #define SHOW_RESULTS                0   // если вам хочется сразу видеть результат в окошке - переключите в 1, но не забудьте выключить перед коммитом (иначе бот в CI будет ждать веками)
@@ -28,7 +31,7 @@ void drawKeyPoints(cv::Mat &img, const std::vector<cv::KeyPoint> &kps, const std
         int thickness = 1;
         cv::Scalar color;
         if (is_not_matched[i]) {
-            color = CV_RGB(255, 0, 0); // OpenCV использует BGR схему вместо RGB, но можно использовать этот макрос вместо BGR - cv::Scalar(blue=0, green=0, red=255)  
+            color = CV_RGB(255, 0, 0); // OpenCV использует BGR схему вместо RGB, но можно использовать этот макрос вместо BGR - cv::Scalar(blue=0, green=0, red=255)
             thickness = 2;
         } else {
             color = cv::Scalar(r.uniform(0, 255), r.uniform(0, 255), 0);
@@ -115,11 +118,13 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
                 detector->compute(img0, kps0, desc0);
                 detector->compute(img1, kps1, desc1);
             } else if (method == 2) {
-                method_name = "SIFT_MY";
-                log_prefix = "[SIFT_MY] ";
-                phg::SIFT mySIFT;
-                mySIFT.detectAndCompute(img0, kps0, desc0);
-                mySIFT.detectAndCompute(img1, kps1, desc1);
+                // TODO remove 'return' and uncomment
+                return;
+//                method_name = "SIFT_MY";
+//                log_prefix = "[SIFT_MY] ";
+//                phg::SIFT mySIFT;
+//                mySIFT.detectAndCompute(img0, kps0, desc0);
+//                mySIFT.detectAndCompute(img1, kps1, desc1);
             } else {
                 rassert(false, 13532513412); // это не проверка как часть тестирования, это проверка что число итераций в цикле и if-else ветки все еще согласованы и не разошлись
             }
@@ -148,7 +153,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
             // эта прагма - способ распараллелить цикл на все ядра процессора (см. OpenMP parallel for)
             // reduction позволяет сказать OpenMP что нужно провести редукцию суммированием для каждой из переменных: error_sum, n_matched, n_in_bounds, ...
             // мы ведь хотим найти сумму по всем потокам
-            #pragma omp parallel for reduction(+:error_sum, n_matched, n_in_bounds, size_ratio_sum, angle_diff_sum, desc_dist_sum, desc_rand_dist_sum)
+#pragma omp parallel for reduction(+:error_sum, n_matched, n_in_bounds, size_ratio_sum, angle_diff_sum, desc_dist_sum, desc_rand_dist_sum)
             for (ptrdiff_t i = 0; i < kps0.size(); ++i) {
                 cv::Point2f p01 = ps01[i]; // взяли ожидаемую координату куда должна была перейти точка
                 if (p01.x > 0 && p01.x < width && p01.y > 0 && p01.y < height) {
@@ -220,7 +225,7 @@ void evaluateDetection(const cv::Mat &M, double minRecall, cv::Mat img0=cv::Mat(
             std::cout << log_prefix << "average size ratio between matched points: " << (size_ratio_sum / n_matched) << std::endl;
             if (angle_diff_sum != 0.0) {
                 std::cout << log_prefix << "average angle difference between matched points: " << (angle_diff_sum / n_matched) << " degrees" << std::endl;
-
+                // TODO почему SIFT менее точно угадывает средний угол отклонения? изменяется ли ситуация если выкрутить параметр ORIENTATION_VOTES_PEAK_RATIO=0.999? почему?
             }
             if (desc_dist_sum != 0.0 && desc_rand_dist_sum != 0.0) {
                 std::cout << log_prefix << "average descriptor distance between matched points: " << (desc_dist_sum / n_matched) << " (random distance: " << (desc_rand_dist_sum / n_matched) << ") => differentiability=" << (desc_dist_sum / desc_rand_dist_sum) << std::endl;
