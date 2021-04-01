@@ -22,7 +22,7 @@
 #include <ceres/ceres.h>
 
 // TODO включите Bundle Adjustment (но из любопытства посмотрите как ведет себя реконструкция без BA например для saharov32 без BA)
-#define ENABLE_BA                             0
+#define ENABLE_BA                             1
 // TODO и раскомментируйте вызов runBA ниже
 
 // TODO когда заработает при малом количестве фотографий - увеличьте это ограничение до 100 чтобы попробовать обработать все фотографии (если же успешно будут отрабаывать только N фотографий - отправьте PR выставив здесь это N)
@@ -285,7 +285,7 @@ TEST (SFM, ReconstructNViews) {
         generateTiePointsCloud(tie_points, tracks, keypoints, imgs, aligned, cameras, ncameras, tie_points_and_cameras, tie_points_colors);
         phg::exportPointCloud(tie_points_and_cameras, std::string("data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras.ply", tie_points_colors);
 
-//        runBA(tie_points, tracks, keypoints, cameras, ncameras, calib);
+        runBA(tie_points, tracks, keypoints, cameras, ncameras, calib);
         generateTiePointsCloud(tie_points, tracks, keypoints, imgs, aligned, cameras, ncameras, tie_points_and_cameras, tie_points_colors);
         phg::exportPointCloud(tie_points_and_cameras, std::string("data/debug/test_sfm_ba/") + DATASET_DIR + "/point_cloud_" + to_string(ncameras) + "_cameras_ba.ply", tie_points_colors);
     }
@@ -380,24 +380,48 @@ public:
                     const T* point_global,      // 3D точка: [3]  = {x, y, z}
                     T* residuals) const {       // невязка:  [2]  = {dx, dy}
         // TODO реализуйте функцию проекции, все нужно делать в типе T чтобы ceres-solver мог под него подставить как Jet (очень рекомендую посмотреть Jet.h - как класная статья из википедии!), так и double
+        T point_local[3];
 
         // translation[3] - сдвиг в локальную систему координат камеры
+        const T* translation = camera_extrinsics;
+        const T* rotation = &camera_extrinsics[3];
+
+        point_local[0] = point_global[0] - translation[0];
+        point_local[1] = point_global[1] - translation[1];
+        point_local[2] = point_global[2] - translation[2];
 
         // rotation[3] - angle-axis rotation, поворачиваем точку point->p (чтобы перейти в локальную систему координат камеры)
         // подробнее см. https://en.wikipedia.org/wiki/Axis%E2%80%93angle_representation
         // (P.S. у камеры всмысле вращения три степени свободы)
+        T point_local_rotated[3];
+        ceres::AngleAxisRotatePoint(rotation, point_local, point_local_rotated);
 
         // Проецируем точку на фокальную плоскость матрицы (т.е. плоскость Z=фокальная длина), тем самым переводя в пиксели
+        T k1 = camera_intrinsics[0], k2 = camera_intrinsics[1];
+        T f = camera_intrinsics[2];
+        T cx = camera_intrinsics[3], cy = camera_intrinsics[4];
+
+        point_local_rotated[0] *= f;
+        point_local_rotated[0] /= point_local_rotated[2];
+        point_local_rotated[1] *= f;
+        point_local_rotated[1] /= point_local_rotated[2];
 
 #if ENABLE_INSTRINSICS_K1_K2
         // k1, k2 - коэффициенты радиального искажения (radial distortion)
+        T r2 = point_local_rotated[0]*point_local_rotated[0] + point_local_rotated[1]*point_local_rotated[1];
+        point_local_rotated[0] *= (T) 1 + k1*r2 + k2*r2*r2;
+        point_local_rotated[1] *= (T) 1 + k1*r2 + k2*r2*r2;
 #endif
 
         // Из координат когда точка (0, 0) - центр оптической оси
         // Переходим в координаты когда точка (0, 0) - левый верхний угол картинки
         // cx, cy - координаты центра оптической оси (обычно это центр картинки, но часто он чуть смещен)
+        point_local_rotated[0] += cx;
+        point_local_rotated[1] += cy;
 
         // Теперь по спроецированным координатам не забудьте посчитать невязку репроекции
+        residuals[0] = point_local_rotated[0] - observed_x;
+        residuals[1] = point_local_rotated[1] - observed_y;
 
         return true;
         // TODO сверьте эту функцию с вашей реализацией проекции в src/phg/core/calibration.cpp (они должны совпадать)
@@ -431,7 +455,7 @@ void runBA(std::vector<vector3d> &tie_points,
 
     // внутренние калибровочные параметры камеры: [5] = {k1, k2, f, cx, cy}
     // TODO: преобразуйте calib в блок параметров камеры (ее внутренних характеристик) для оптимизации в BA
-    double camera_intrinsics[5];
+    double camera_intrinsics[5] = {calib.k1_, calib.k2_, calib.f_, calib.cx_ + calib.width()*0.5, calib.cy_ + calib.height()*0.5};;
     std::cout << "Before BA ";
     printCamera(camera_intrinsics);
 
@@ -571,6 +595,11 @@ void runBA(std::vector<vector3d> &tie_points,
     printCamera(camera_intrinsics);
     // TODO преобразуйте параметры камеры в обратную сторону, чтобы последующая резекция учла актуальное представление о пространстве:
     // calib.* = camera_intrinsics[*];
+    calib.k1_ = camera_intrinsics[0];
+    calib.k2_ = camera_intrinsics[1];
+    calib.f_ = camera_intrinsics[2];
+    calib.cx_ = camera_intrinsics[3] - calib.width() * 0.5;;
+    calib.cy_ = camera_intrinsics[4] - calib.height() * 0.5;;
 
     ASSERT_NEAR(calib.f_ , DATASET_F, 0.2 * DATASET_F);
     ASSERT_NEAR(calib.cx_, 0.0, 0.3 * calib.width());
@@ -644,7 +673,18 @@ void runBA(std::vector<vector3d> &tie_points,
 
             if (ENABLE_OUTLIERS_FILTRATION_COLINEAR && ENABLE_BA) {
                 // TODO выполните проверку случая когда два луча почти параллельны, чтобы не было странных точек улетающих на бесконечность (например чтобы угол был хотя бы 2.5 градуса)
-                // should_be_disabled = true;
+                const double threshold = std::cos(2.5 * M_PI / 180.0);
+                vector3d vector = track_point - camera_origin;
+                if (ci != 0) {
+                    int camera_id_other = track.img_kpt_pairs[ci].second;
+                    matrix3d R_other;
+                    vector3d camera_origin_other;
+                    phg::decomposeUndistortedPMatrix(R_other, camera_origin_other, cameras[camera_id_other]);
+                    vector3d vector_other = track_point - camera_origin_other;
+                    double cos = vector.dot(vector_other) / (cv::norm(vector) * cv::norm(vector_other));;
+                    if (cos > threshold)
+                        should_be_disabled = true;
+                }
             }
 
             {
